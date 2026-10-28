@@ -143,6 +143,8 @@ Die fertigen Bilder liegen in `photoshop/fertig/`. Details siehe [README](../REA
 
 ## 6. Tipps für bessere Freistellungen schon beim Shooting
 
+Ausführlich, mit den Ursachen der grünen Reflexe: [gruene-reflexe.md](gruene-reflexe.md).
+
 | Maßnahme | Effekt |
 | --- | --- |
 | **2–3 m Abstand** zwischen Person und Greenscreen | deutlich weniger grünes Streulicht auf Haaren und Schultern |

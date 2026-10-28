@@ -12,6 +12,8 @@ Ein beleuchteter Greenscreen wirkt wie eine große grüne Lichtquelle. Ihr Licht
 
 Eine KI-Maske, etwa „Hintergrund entfernen“ in Photoshop, trennt zwar Motiv und Hintergrund, lässt die grüne Färbung im Motiv aber unverändert.
 
+Ausführlich zu den Ursachen und dazu, wie man Spill schon beim Shooting vermeidet: [gruene-reflexe.md](gruene-reflexe.md).
+
 ## `gruen_entfernen.py`
 
 Die Korrektur läuft im **CIE-Lab-Farbraum**. Der Kanal **a\*** beschreibt dort die Achse Grün (negativ) bis Magenta/Rot (positiv), **b\*** die Achse Blau (negativ) bis Gelb (positiv). Grüner Spill zeigt sich als zu niedriges a\*. Helligkeit (L) und Gelbanteil (b\*) werden nicht verändert.

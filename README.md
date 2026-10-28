@@ -11,6 +11,7 @@ Werkzeuge, mit denen sich hunderte Greenscreen-Fotos automatisch freistellen und
 | [`gruen_entfernen.py`](gruen_entfernen.py) | **Hauptwerkzeug.** Entfernt grüne Reflexe aus bereits freigestellten PNGs, zum Beispiel aus Photoshop. Die Transparenz bleibt unverändert. |
 | [`photoshop/png_speichern_tiff_loeschen.jsx`](photoshop/png_speichern_tiff_loeschen.jsx) | Photoshop-Script für die Aktion: speichert das freigestellte Bild als PNG, löscht danach das Quell-TIFF und leert den Speicher. |
 | [`greenscreen_freistellen.py`](greenscreen_freistellen.py) | Alternative ohne Photoshop: stellt selbst per Chroma-Key frei, entfernt den Spill und gleicht die Belichtung über die Serie an. |
+| [`docs/gruene-reflexe.md`](docs/gruene-reflexe.md) | **Warum grüne Reflexe entstehen und wie man sie beim Shooting verhindert**, inklusive der Alternative mit grauem Hintergrund |
 | [`docs/photoshop.md`](docs/photoshop.md) | Einrichtung von Photoshop, Aufbau der Aktion, Stapelverarbeitung und Tipps für bessere Freistellungen |
 | [`docs/funktionsweise.md`](docs/funktionsweise.md) | Was die Scripts technisch machen und welche Parameter man anpassen kann |
 
@@ -153,4 +154,4 @@ Batch tools to cut out **hundreds of green-screen photos** and remove **green sp
 - **`greenscreen_freistellen.py FOLDER`** does everything without Photoshop: chroma key, despill and exposure matching across the series. Extra options: `--referenz FILE` (match brightness to this image), `--belichtung EV`, `--ohne-belichtung` (no exposure matching), `--ohne-gruenfilter` (for green clothing). Output goes to `FOLDER/freigestellt`.
 - **`photoshop/png_speichern_tiff_loeschen.jsx`** is recorded into the Photoshop action after background removal. It saves a PNG into a `photoshop/` subfolder, verifies it, then **permanently deletes the source TIFF** (set `TIFF_LOESCHEN = false` to keep it), closes the document and purges caches. Run the batch with destination *None*.
 
-Install: `python3 -m venv ~/.venvs/greenscreen && ~/.venvs/greenscreen/bin/pip install -r requirements.txt`. How the algorithm works (Lab colour space, edge zone, alpha-weighted colour propagation) is described in [docs/funktionsweise.md](docs/funktionsweise.md).
+Install: `python3 -m venv ~/.venvs/greenscreen && ~/.venvs/greenscreen/bin/pip install -r requirements.txt`. How the algorithm works (Lab colour space, edge zone, alpha-weighted colour propagation) is described in [docs/funktionsweise.md](docs/funktionsweise.md). Why green spill happens and how to avoid it on set (distance to the screen, background exposure, rim light, or simply a grey backdrop when masking with AI) is covered in [docs/gruene-reflexe.md](docs/gruene-reflexe.md).
