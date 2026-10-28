@@ -162,7 +162,7 @@ Die fertigen Bilder liegen in `photoshop/fertig/`. Details siehe [README](../REA
 | --- | --- |
 | „Abweichung vom eingebetteten Profil“ hält den Stapel an | Farbeinstellungen wie in [2.2](#22-farbmanagement) setzen und „Farbprofil-Warnungen unterdrücken“ in der Stapelverarbeitung aktivieren |
 | PNG fehlt unter *Speichern unter* | Nur relevant, wenn du ohne das Script speicherst: *Einstellungen → Dateihandhabung →* „Legacy-Dialogfeld ‚Speichern unter‘ aktivieren“ |
-| Photoshop wird mit der Zeit langsam | Protokollobjekte reduzieren ([2.3](#23-leistung-für-lange-stapel)). Das Script leert nach jedem Bild die Caches |
+| Photoshop wird mit der Zeit langsam oder bricht mit Speicherfehler ab | Bekanntes Problem: Photoshop gibt Speicher bei langen Stapeln nicht vollständig frei, auch nicht nach dem Cache-Leeren durch das Script. Stapel in Teilen von 50–100 Bildern laufen lassen und Photoshop dazwischen neu starten, Protokollobjekte reduzieren ([2.3](#23-leistung-für-lange-stapel)). Siehe [Bekannte Probleme](../README.md#bekannte-probleme) |
 | Haare wirken abgehackt | Cloud-Verarbeitung aktivieren ([2.1](#21-ki-qualität-für-motiv-auswählen-und-hintergrund-entfernen)) oder Variante B mit „Haare verfeinern“ |
 | Script-Schritt findet die .jsx nicht mehr | Die Datei wurde verschoben. Den Schritt in der Aktion löschen und neu aufzeichnen |
 | `gruen_entfernen.py` meldet „keine Transparenz“ | Das PNG wurde ohne Maske gespeichert. Prüfen, ob der Freistellungsschritt in der Aktion vor dem Script steht |

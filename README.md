@@ -97,6 +97,19 @@ Auf einem Mac mit 8 GB RAM `--workers 2` verwenden. Ein 8-Bit-PNG mit Transparen
 - Die Korrektur geht davon aus, dass die Bilder **sRGB-ähnlich** kodiert sind. Bei ProPhoto RGB funktioniert sie, ist aber weniger genau.
 - Fehler in der Photoshop-Maske, zum Beispiel ein abgeschnittenes Ohr, korrigiert `gruen_entfernen.py` nicht. Es verändert die Transparenz absichtlich nicht.
 
+## Bekannte Probleme
+
+### Photoshop gibt bei langen Stapelverarbeitungen den Arbeitsspeicher nicht vollständig frei
+
+Bei Stapeln mit hunderten großen Bildern (33 MP, 16 Bit) steigt der Speicherverbrauch von Photoshop von Bild zu Bild an, obwohl jedes Dokument wieder geschlossen wird. Photoshop wird dadurch zunehmend langsamer und kann irgendwann mit einem Speicherfehler abbrechen.
+
+`png_speichern_tiff_loeschen.jsx` schließt deshalb jedes Dokument ausdrücklich ohne Speichern und ruft danach `app.purge(PurgeTarget.ALLCACHES)` auf. Das leert Protokoll, Zwischenablage und Bildcaches. Es mildert das Problem, behebt es aber nicht vollständig. Ein Teil des Speichers wird erst beim Beenden von Photoshop wieder frei.
+
+**Workarounds:**
+- Den Stapel in **Teilen von etwa 50–100 Bildern** laufen lassen und Photoshop zwischendurch neu starten. Da das Script verarbeitete TIFFs löscht, enthält der Quellordner beim nächsten Start nur noch die offenen Bilder.
+- Unter *Einstellungen → Leistung* die **Protokollobjekte** auf etwa 5 reduzieren (siehe [docs/photoshop.md](docs/photoshop.md#23-leistung-für-lange-stapel)).
+- Während des Stapels keine anderen speicherintensiven Programme laufen lassen, zum Beispiel Lightroom.
+
 ## Lizenz
 
 [MIT](LICENSE)
