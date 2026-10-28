@@ -29,7 +29,9 @@ Lightroom ──► TIFF-Export ──► Photoshop-Stapel ──► gruen_entfe
 
 ## Installation
 
-Voraussetzung ist Python 3.9 oder neuer. Auf macOS mit Homebrew-Python legst du eine eigene virtuelle Umgebung an, denn Homebrew erlaubt keine globalen `pip install`:
+Voraussetzung ist Python 3.9 oder neuer. Zuerst das Repository herunterladen, entweder per `git clone https://github.com/torbenfla/greenscreen-batch.git` oder über *Code → Download ZIP* auf GitHub, und im Terminal in den Ordner wechseln.
+
+**macOS / Linux:** Auf macOS mit Homebrew-Python legst du eine eigene virtuelle Umgebung an, denn Homebrew erlaubt keine globalen `pip install`:
 
 ```bash
 python3 -m venv ~/.venvs/greenscreen
@@ -37,6 +39,15 @@ python3 -m venv ~/.venvs/greenscreen
 ```
 
 Danach rufst du die Scripts immer mit `~/.venvs/greenscreen/bin/python` auf. Alternativ aktivierst du die Umgebung einmal pro Terminal-Sitzung mit `source ~/.venvs/greenscreen/bin/activate` und schreibst danach nur `python`.
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv $HOME\.venvs\greenscreen
+& $HOME\.venvs\greenscreen\Scripts\pip install -r requirements.txt
+```
+
+Aufruf dann mit `& $HOME\.venvs\greenscreen\Scripts\python gruen_entfernen.py …`. Das Photoshop-Script funktioniert unter Windows genauso, die Menüpfade heißen dort *Bearbeiten → Voreinstellungen* statt *Photoshop → Einstellungen*.
 
 ## Nutzung
 
@@ -103,6 +114,15 @@ Auf einem Mac mit 8 GB RAM `--workers 2` verwenden. Ein 8-Bit-PNG mit Transparen
 
 Bei Stapeln mit hunderten großen Bildern (33 MP, 16 Bit) steigt der Speicherverbrauch von Photoshop von Bild zu Bild an, obwohl jedes Dokument wieder geschlossen wird. Photoshop wird dadurch zunehmend langsamer und kann irgendwann mit einem Speicherfehler abbrechen.
 
+Ein typisches Anzeichen ist **schrumpfender freier Speicherplatz auf der Festplatte**, obwohl kaum neue Dateien entstehen: Wird der Arbeitsspeicher knapp, lagert macOS in Swap-Dateien auf die SSD aus, und Photoshop legt zusätzlich eigene Arbeitsvolume-Dateien an. Beides kann während eines langen Stapels 20 GB und mehr belegen. Prüfen lässt sich das im Terminal:
+
+```bash
+sysctl vm.swapusage             # Swap-Belegung von macOS
+top -o mem -l 1 -n 5            # welche Programme den meisten RAM halten
+```
+
+Der Platz wird wieder frei, sobald Photoshop beendet wird.
+
 `png_speichern_tiff_loeschen.jsx` schließt deshalb jedes Dokument ausdrücklich ohne Speichern und ruft danach `app.purge(PurgeTarget.ALLCACHES)` auf. Das leert Protokoll, Zwischenablage und Bildcaches. Es mildert das Problem, behebt es aber nicht vollständig. Ein Teil des Speichers wird erst beim Beenden von Photoshop wieder frei.
 
 **Workarounds:**
@@ -112,4 +132,18 @@ Bei Stapeln mit hunderten großen Bildern (33 MP, 16 Bit) steigt der Speicherver
 
 ## Lizenz
 
-[MIT](LICENSE)
+[MIT](LICENSE) – frei nutzbar, auch kommerziell. Fehlerberichte und Verbesserungen gerne als Issue oder Pull Request.
+
+---
+
+## English summary
+
+Batch tools to cut out **hundreds of green-screen photos** and remove **green spill** from hair, skin, jewellery and white jerseys. Output is transparent PNGs with natural edge colours; the embedded ICC profile is preserved. Command-line options, messages and the detailed docs are in German.
+
+**Recommended workflow:** export 16-bit sRGB TIFFs from Lightroom → run a Photoshop batch action (*Remove Background* + [`photoshop/png_speichern_tiff_loeschen.jsx`](photoshop/png_speichern_tiff_loeschen.jsx)) → run `gruen_entfernen.py` on the resulting PNGs.
+
+- **`gruen_entfernen.py FOLDER`** removes spill from PNGs that already have transparency. The alpha mask is never changed. Options: `--nur FILE…` (only these files), `--ziel DIR` (output, default `FOLDER/fertig`), `--staerke X` (edge correction strength 0–1.5), `--16bit`, `--workers N`, `--neu` (overwrite existing results).
+- **`greenscreen_freistellen.py FOLDER`** does everything without Photoshop: chroma key, despill and exposure matching across the series. Extra options: `--referenz FILE` (match brightness to this image), `--belichtung EV`, `--ohne-belichtung` (no exposure matching), `--ohne-gruenfilter` (for green clothing). Output goes to `FOLDER/freigestellt`.
+- **`photoshop/png_speichern_tiff_loeschen.jsx`** is recorded into the Photoshop action after background removal. It saves a PNG into a `photoshop/` subfolder, verifies it, then **permanently deletes the source TIFF** (set `TIFF_LOESCHEN = false` to keep it), closes the document and purges caches. Run the batch with destination *None*.
+
+Install: `python3 -m venv ~/.venvs/greenscreen && ~/.venvs/greenscreen/bin/pip install -r requirements.txt`. How the algorithm works (Lab colour space, edge zone, alpha-weighted colour propagation) is described in [docs/funktionsweise.md](docs/funktionsweise.md).

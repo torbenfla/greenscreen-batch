@@ -1,11 +1,18 @@
 __pycache__/
 *.pyc
 .venv/
+venv/
 .DS_Store
+
+# Bilder und Ergebnisse nie versehentlich hochladen
 *.tif
 *.tiff
 *.png
 *.jpg
 *.jpeg
+*.psd
+*.part
 fertig/
 freigestellt/
+belichtung.csv
+.belichtung_ziel

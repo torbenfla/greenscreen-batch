@@ -51,7 +51,7 @@ Ohne diese Einstellungen hält die Stapelverarbeitung bei jedem Bild mit der Mel
 
 *Photoshop → Einstellungen → Leistung*:
 
-- **Arbeitsspeicher** für Photoshop auf etwa 70–80 % setzen.
+- **Arbeitsspeicher** für Photoshop auf etwa 60–70 % setzen. Mehr ist bei langen Stapeln kontraproduktiv: Auf einem Mac mit 16 GB belegte Photoshop in der Praxis rund 13 GB, macOS musste massiv auf die SSD auslagern, und der freie Festplattenplatz schrumpfte um über 20 GB.
 - **Protokollobjekte** auf etwa 5 reduzieren. Bei 33-Megapixel-Bildern füllt jeder Protokollschritt sonst Hunderte Megabyte.
 
 Das Script `png_speichern_tiff_loeschen.jsx` leert nach jedem Bild zusätzlich alle Caches.
