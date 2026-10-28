@@ -70,8 +70,15 @@ Aufruf dann mit `& $HOME\.venvs\greenscreen\Scripts\python gruen_entfernen.py �
 | `--16bit` | 16-Bit-PNGs statt 8 Bit ausgeben | aus |
 | `--workers N` | Anzahl gleichzeitig verarbeiteter Bilder | halbe CPU-Kerne, max. 4 |
 | `--neu` | vorhandene Ergebnisse überschreiben | aus |
+| `--beobachten` | laufend auf neue Bilder warten, Strg+C beendet | aus |
 
-Dateien ohne Transparenz werden mit einem Hinweis übersprungen. Wenn du den Lauf abbrichst, macht ein erneuter Start beim nächsten unfertigen Bild weiter.
+Bereits verarbeitete Bilder werden übersprungen, **außer die Quelldatei ist neuer als das Ergebnis**, etwa weil Photoshop ein Bild neu freigestellt hat. Dateien, die in den letzten 10 Sekunden geschrieben wurden, werden erst später verarbeitet. So liest das Script keine halb gespeicherten PNGs. Dateien ohne Transparenz werden mit einem Hinweis übersprungen. Wenn du den Lauf abbrichst, macht ein erneuter Start beim nächsten unfertigen Bild weiter.
+
+**Parallel zur Photoshop-Stapelverarbeitung:** Mit `--beobachten` startest du das Script gleichzeitig mit Photoshop. Es verarbeitet jedes neue PNG, sobald Photoshop es fertig geschrieben hat, und wartet danach auf das nächste:
+
+```bash
+~/.venvs/greenscreen/bin/python gruen_entfernen.py ~/Bilder/shooting/photoshop --beobachten
+```
 
 ### `greenscreen_freistellen.py`: alles in einem, ohne Photoshop
 

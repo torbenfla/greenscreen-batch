@@ -24,9 +24,16 @@ Optionen:
     --16bit                   16-Bit-PNGs ausgeben
     --workers N               parallele Bilder (ca. 2 GB RAM pro Bild)
     --neu                     vorhandene Ergebnisse ueberschreiben
+    --beobachten              laufend auf neue Bilder warten, z. B. waehrend die
+                              Photoshop-Stapelverarbeitung noch laeuft (Strg+C beendet)
+
+Bereits verarbeitete Bilder werden uebersprungen – ausser die Quelldatei ist
+neuer als das Ergebnis (z. B. in Photoshop neu freigestellt). Dateien, die in
+den letzten 10 Sekunden geschrieben wurden, werden erst spaeter verarbeitet.
 """
 import argparse
 import os
+import signal
 import struct
 import sys
 import time
@@ -146,6 +153,64 @@ def process(src, dst, out16, strength):
     os.replace(tmp, dst)
 
 
+STABLE_SECONDS = 10   # Dateien, die juenger sind, schreibt Photoshop evtl. noch
+WATCH_INTERVAL = 15   # Sekunden zwischen zwei Pruefungen im Modus --beobachten
+
+
+def collect_jobs(src_dir, dst_dir, only=None, force=False, failed=None):
+    """Offene Bilder finden: Ergebnis fehlt oder Quelle ist neuer als das Ergebnis.
+    Gibt (jobs, noch_in_arbeit) zurueck."""
+    files = sorted(f for f in os.listdir(src_dir)
+                   if os.path.splitext(f)[1].lower() in EXT and not f.startswith("."))
+    if only:
+        files = [f for f in files if f in set(only)]
+    now = time.time()
+    jobs, busy = [], 0
+    for f in files:
+        src = os.path.join(src_dir, f)
+        dst = os.path.join(dst_dir, os.path.splitext(f)[0] + ".png")
+        try:
+            s_mtime = os.path.getmtime(src)
+        except OSError:
+            continue
+        if now - s_mtime < STABLE_SECONDS:
+            busy += 1
+            continue
+        if failed is not None and failed.get(src) == s_mtime:
+            continue                      # schon fehlgeschlagen und seitdem unveraendert
+        if not force and os.path.exists(dst) and os.path.getmtime(dst) >= s_mtime:
+            continue
+        jobs.append((src, dst))
+    return jobs, busy
+
+
+def _worker_init():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)   # Strg+C behandelt nur der Hauptprozess
+
+
+def run_jobs(ex, jobs, out16, strength, failed):
+    t0 = time.time()
+    done = errs = 0
+    futs = {ex.submit(process, s, d, out16, strength): s for s, d in jobs}
+    for fut in as_completed(futs):
+        src = futs[fut]
+        name = os.path.basename(src)
+        try:
+            fut.result()
+            done += 1
+            failed.pop(src, None)
+            eta = (time.time() - t0) / (done + errs) * (len(jobs) - done - errs)
+            print(f"[{done + errs}/{len(jobs)}] {name}  ok   (Rest ca. {eta / 60:.0f} min)", flush=True)
+        except Exception as e:
+            errs += 1
+            try:
+                failed[src] = os.path.getmtime(src)
+            except OSError:
+                pass
+            print(f"[{done + errs}/{len(jobs)}] {name}  FEHLER: {e}", flush=True)
+    return done, errs
+
+
 def main():
     p = argparse.ArgumentParser(description="Gruene Reflexe aus freigestellten Bildern entfernen")
     p.add_argument("ordner")
@@ -155,44 +220,51 @@ def main():
     p.add_argument("--16bit", dest="out16", action="store_true")
     p.add_argument("--workers", type=int, default=0)
     p.add_argument("--neu", action="store_true")
+    p.add_argument("--beobachten", action="store_true",
+                   help="laufend auf neue Bilder warten (z. B. waehrend Photoshop noch arbeitet), Strg+C beendet")
     args = p.parse_args()
 
     src_dir = os.path.abspath(os.path.expanduser(args.ordner))
     dst_dir = os.path.abspath(os.path.expanduser(args.ziel or os.path.join(src_dir, "fertig")))
     os.makedirs(dst_dir, exist_ok=True)
-    files = sorted(f for f in os.listdir(src_dir)
-                   if os.path.splitext(f)[1].lower() in EXT and not f.startswith("."))
-    if args.nur:
-        files = [f for f in files if f in set(args.nur)]
-    jobs = []
-    for f in files:
-        dst = os.path.join(dst_dir, os.path.splitext(f)[0] + ".png")
-        if os.path.exists(dst) and not args.neu:
-            continue
-        jobs.append((os.path.join(src_dir, f), dst))
-    if not jobs:
-        print("Nichts zu tun – alle Bilder sind schon verarbeitet (--neu zum Ueberschreiben).")
-        return
-
     workers = args.workers or max(1, min(4, (os.cpu_count() or 2) // 2))
     strength = float(np.clip(args.staerke, 0, 1.5))
-    print(f"{len(jobs)} Bilder → {dst_dir}  ({workers} parallel, Staerke {strength})", flush=True)
-    t0 = time.time()
-    done = failed = 0
-    with ProcessPoolExecutor(max_workers=workers) as ex:
-        futs = {ex.submit(process, s, d, args.out16, strength): s for s, d in jobs}
-        for fut in as_completed(futs):
-            name = os.path.basename(futs[fut])
-            try:
-                fut.result()
-                done += 1
-                eta = (time.time() - t0) / (done + failed) * (len(jobs) - done - failed)
-                print(f"[{done + failed}/{len(jobs)}] {name}  ok   (Rest ca. {eta / 60:.0f} min)", flush=True)
-            except Exception as e:
-                failed += 1
-                print(f"[{done + failed}/{len(jobs)}] {name}  FEHLER: {e}", flush=True)
-    print(f"Fertig: {done} ok, {failed} Fehler, {(time.time() - t0) / 60:.1f} min")
-    if failed:
+    failed = {}
+    total_ok = total_err = 0
+    force = args.neu
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=_worker_init) as ex:
+        try:
+            first = True
+            while True:
+                jobs, busy = collect_jobs(src_dir, dst_dir, args.nur, force, failed)
+                force = False             # --neu gilt nur fuer den ersten Durchgang
+                if jobs:
+                    print(f"{len(jobs)} Bilder → {dst_dir}  ({workers} parallel, Staerke {strength})", flush=True)
+                    ok, err = run_jobs(ex, jobs, args.out16, strength, failed)
+                    total_ok += ok
+                    total_err += err
+                    first = False
+                    continue              # sofort nachsehen, ob inzwischen Neues da ist
+                if not args.beobachten:
+                    if busy:
+                        print(f"{busy} Bild(er) werden gerade noch geschrieben – in ein paar Sekunden erneut starten.")
+                    elif first:
+                        print("Nichts zu tun – alle Bilder sind aktuell (--neu zum Ueberschreiben).")
+                    break
+                if first or busy:
+                    msg = f"{busy} Bild(er) werden noch geschrieben, " if busy else ""
+                    print(f"Warte auf neue Bilder … {msg}(Strg+C beendet)", flush=True)
+                first = False
+                time.sleep(WATCH_INTERVAL)
+        except KeyboardInterrupt:
+            print("\nBeende … laufende Bilder werden noch fertig gespeichert.", flush=True)
+            ex.shutdown(wait=True, cancel_futures=True)
+            print("Beendet.")
+
+    if total_ok or total_err:
+        print(f"Insgesamt: {total_ok} ok, {total_err} Fehler")
+    if total_err:
         sys.exit(1)
 
 
